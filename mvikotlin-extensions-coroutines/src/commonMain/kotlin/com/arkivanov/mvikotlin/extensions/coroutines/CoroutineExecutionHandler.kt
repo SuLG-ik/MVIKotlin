@@ -18,12 +18,12 @@ inline fun <reified T : Any, Action : Any, State : Any, Message : Any, Label : A
 inline fun <reified T : Any, Action : Any, State : Any, Message : Any, Label : Any> coroutineSkippingExecutionHandler(
     noinline handler: CoroutineExecutorScope<State, Message, Action, Label>.(T) -> Unit
 ): ExecutionHandler<T, CoroutineExecutorScope<State, Message, Action, Label>> {
-    return typedExecutionHandler(CoroutineSkippingExecutionHandler(handler))
+    return typedExecutionHandler(CoroutineSkippingExecutionHandler(directExecutionHandler(handler)))
 }
 
 @OptIn(ExperimentalMviKotlinApi::class)
 class CoroutineSkippingExecutionHandler<T : Any, State : Any, Message : Any, Action : Any, Label : Any> @PublishedApi internal constructor(
-    private val nestedHandler: CoroutineExecutorScope<State, Message, Action, Label>.(T) -> Unit,
+    private val nestedHandler: ExecutionHandler<T, CoroutineExecutorScope<State, Message, Action, Label>>,
 ) : ExecutionHandler<T, CoroutineExecutorScope<State, Message, Action, Label>> {
 
     private var jobHost: Job = Job()
@@ -33,7 +33,7 @@ class CoroutineSkippingExecutionHandler<T : Any, State : Any, Message : Any, Act
             return false
         }
         val newScope = CoroutineSkippingExecutorScope(jobHost, scope)
-        nestedHandler.invoke(newScope, value)
+        nestedHandler.handle(newScope, value)
         return true
     }
 
